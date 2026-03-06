@@ -1,6 +1,6 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, session
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key_here'
 
@@ -23,8 +23,33 @@ class PortalUser(db.Model):
 def home():
     return render_template("home.html")
 
-@app.route("/login")
+@app.route("/login", methods=["GET", "POST"])
 def login():
+
+    if request.method == "POST":
+
+        email = request.form.get("email")
+        password = request.form.get("password")
+
+        user = PortalUser.query.filter_by(email_address=email).first()
+
+        if user and check_password_hash(user.password_hash, password):
+
+            # Store user info in session
+            session["user_id"] = user.id
+            session["user_role"] = user.role_type
+            session["user_name"] = user.candidate_name
+
+            # Redirect based on role
+            if user.role_type == "student":
+                return redirect("/student-dashboard")
+
+            elif user.role_type == "company":
+                return redirect("/company-dashboard")
+
+        else:
+            return "Invalid email or password"
+
     return render_template("login.html")
 
 @app.route("/register", methods=["GET", "POST"])
@@ -60,6 +85,24 @@ def register():
         return redirect("/login")
 
     return render_template("register.html")
+@app.route("/student-dashboard")
+def student_dashboard():
+
+    if "user_id" not in session:
+        return redirect("/login")
+
+    return f"Welcome {session['user_name']} (Student)"
+@app.route("/company-dashboard")
+def company_dashboard():
+
+    if "user_id" not in session:
+        return redirect("/login")
+
+    return f"Welcome {session['user_name']} (Company)"
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
 
 if __name__ == "__main__":
     with app.app_context():
