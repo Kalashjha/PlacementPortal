@@ -46,6 +46,8 @@ def login():
 
             elif user.role_type == "company":
                 return redirect("/company-dashboard")
+            elif user.role_type == "admin":
+                return redirect("/admin-dashboard")
 
         else:
             return "Invalid email or password"
@@ -99,6 +101,18 @@ def company_dashboard():
         return redirect("/login")
 
     return f"Welcome {session['user_name']} (Company)"
+@app.route("/admin-dashboard")
+def admin_dashboard():
+
+    # Check if user is logged in
+    if "user_id" not in session:
+        return redirect("/login")
+
+    # Check if user is admin
+    if session["user_role"] != "admin":
+        return "Access denied. Admin only."
+
+    return render_template("admin_dashboard.html", name=session["user_name"])
 @app.route("/logout")
 def logout():
     session.clear()
